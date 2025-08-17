@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynasty iooi Fantasy Football Draft Lottery Simulator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      min-height: 100vh;
+      color: #ffffff;
+      line-height: 1.5;
+    }
+
+    .header {
+      background: #2a2a3a;
+      padding: 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid #3a3a4a;
+    }
+
+    .header h1 {
+      color: #ffffff;
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .header .subtitle {
+      color: #a0a0b0;
+      font-size: 0.9rem;
+      font-weight: 400;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    .countdown-card {
+      background: #2a2a3a;
+      border-radius: 12px;
+      padding: 1rem;
+      margin: 1rem 0;
+      text-align: center;
+      border: 1px solid #3a3a4a;
+    }
+
+    #countdown {
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: #ffffff;
+      margin: 0;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary {
+      background: #6b4eff;
+      color: #ffffff;
+    }
+
+    .btn-secondary {
+      background: #ff2d55;
+      color: #ffffff;
+    }
+
+    .btn-tertiary {
+      background: #00ddeb;
+      color: #ffffff;
+    }
+
+    .btn:hover {
+      filter: brightness(1.1);
+    }
+
+    .btn:active {
+      filter: brightness(0.9);
+    }
+
+    .btn:disabled {
+      background: #4a4a5a;
+      cursor: not-allowed;
+    }
+
+    .table-container {
+      background: #2a2a3a;
+      border-radius: 12px;
+      padding: 1rem;
+      border: 1px solid #3a3a4a;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+    }
+
+    th {
+      background: #3a3a4a;
+      color: #ffffff;
+      padding: 0.75rem;
+      text-align: center;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      border: none;
+    }
+
+    th:first-child {
+      border-radius: 8px 0 0 0;
+    }
+
+    th:last-child {
+      border-radius: 0 8px 0 0;
+    }
+
+    td {
+      padding: 0.75rem;
+      text-align: center;
+      border-bottom: 1px solid #3a3a4a;
+      color: #d0d0d0;
+      font-size: 0.9rem;
+    }
+
+    tr:hover td {
+      background: #34344a;
+    }
+
+    .lottery-pick td {
+      background: #3e3e5a;
+      font-weight: 600;
+    }
+
+    .separator td {
+      background: #3a3a4a;
+      color: #ffffff;
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: 0.5rem;
+    }
+
+    .arrow-up { 
+      color: #00ff85; 
+      font-weight: bold;
+    }
+    .arrow-down { 
+      color: #ff2d55; 
+      font-weight: bold;
+    }
+    .arrow-same { 
+      color: #a0a0b0;
+      font-weight: bold;
+    }
+
+    .lottery-reveal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .reveal-container {
+      text-align: center;
+      color: #ffffff;
+      padding: 1rem;
+    }
+
+    .reveal-title {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: #6b4eff;
+    }
+
+    .card-container {
+      perspective: 1000px;
+      margin: 1rem auto;
+      width: 280px;
+      height: 180px;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.8s;
+      cursor: pointer;
+    }
+
+    .card.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.1em;
+      font-weight: 600;
+      background: #2a2a3a;
+      border: 1px solid #3a3a4a;
+    }
+
+    .card-front {
+      background: #3a3a4a;
+      color: #ffffff;
+    }
+
+    .card-back {
+      background: #6b4eff;
+      color: #ffffff;
+      transform: rotateY(180deg);
+    }
+
+    .projected-text {
+      font-size: 0.8em;
+      margin-bottom: 8px;
+      color: #a0a0b0;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .team-name {
+      font-size: 1.2em;
+      margin-bottom: 6px;
+    }
+
+    .team-record {
+      font-size: 0.8em;
+      color: #d0d0d0;
+    }
+
+    .reveal-comment {
+      margin-top: 1.5rem;
+      font-size: 1.1em;
+      color: #00ddeb;
+      font-weight: 500;
+      min-height: 30px;
+    }
+
+    .continue-btn {
+      margin-top: 1.5rem;
+      padding: 10px 20px;
+      font-size: 0.9em;
+      background: #6b4eff;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+    }
+
+    .continue-btn:hover {
+      filter: brightness(1.1);
+    }
+
+    .skip-btn {
+      margin-top: 1rem;
+      padding: 8px 16px;
+      font-size: 0.8em;
+      background: #3a3a4a;
+      color: #ffffff;
+      border: 1px solid #4a4a5a;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .skip-btn:hover {
+      background: #4a4a5a;
+    }
+
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 1.5rem;
+      }
+      
+      .container {
+        padding: 0.5rem;
+      }
+      
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .btn {
+        width: 100%;
+        padding: 12px;
+      }
+      
+      .reveal-title {
+        font-size: 1.5rem;
+      }
+      
+      .card-container {
+        width: 240px;
+        height: 160px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Dynasty iooi Fantasy Football</h1>
+    <div class="subtitle">Draft Lottery Simulator</div>
+  </div>
+
+  <div class="container">
+    <div class="countdown-card">
+      <div id="countdown"></div>
+    </div>
+
+    <div class="controls">
+      <button class="btn btn-primary" onclick="simulateLottery()">Quick Sim</button>
+      <button class="btn btn-secondary" onclick="animatedLottery()" id="animated-btn">Animated Lottery</button>
+      <button class="btn btn-tertiary" onclick="resetLottery()">Reset</button>
+    </div>
+
+    <div class="table-container">
+      <table id="lottery-table">
+        <thead>
+          <tr>
+            <th>Pick</th>
+            <th>Seed</th>
+            <th>Record</th>
+            <th>Δ</th>
+            <th>Pick 1</th>
+            <th>Pick 2</th>
+            <th>Pick 3</th>
+            <th>Pick 4</th>
+            <th>Pick 5</th>
+            <th>Pick 6</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="lottery-reveal" id="lottery-reveal">
+    <div class="reveal-container">
+      <div class="reveal-title" id="reveal-title"></div>
+      <div class="card-container">
+        <div class="card" id="reveal-card" onclick="flipCard()">
+          <div class="card-face card-front" id="card-front">
+            <div class="projected-text">Projected:</div>
+            <div class="team-name" id="projected-team"></div>
+            <div class="team-record" id="projected-record"></div>
+          </div>
+          <div class="card-face card-back" id="card-back">
+            <div class="projected-text">Actual Pick:</div>
+            <div class="team-name" id="actual-team"></div>
+            <div class="team-record" id="actual-record"></div>
+          </div>
+        </div>
+      </div>
+      <div class="reveal-comment" id="reveal-comment">Tap to reveal!</div>
+      <button class="continue-btn" id="continue-btn" onclick="nextReveal()" style="display: none;">Continue</button>
+      <button class="skip-btn" id="skip-btn" onclick="skipAnimation()" style="display: none;">Skip Animation</button>
+    </div>
+  </div>
+
+  <script>
+    let seeds;
+    let originalOrder;
+    let currentOrder;
+    let lotteryResults = [];
+    let animationState = {
+      active: false,
+      currentPick: 0,
+      results: [],
+      cardFlipped: false
+    };
+
+    async function loadData() {
+      const rostersResponse = await fetch('https://api.sleeper.app/v1/league/1180235542497525760/rosters');
+      const rosters = await rostersResponse.json();
+      const usersResponse = await fetch('https://api.sleeper.app/v1/league/1180235542497525760/users');
+      const users = await usersResponse.json();
+      const tradedResponse = await fetch('https://api.sleeper.app/v1/league/1180235542497525760/traded_picks');
+      const tradedPicks = await tradedResponse.json();
+
+      const teams = rosters.map(roster => {
+        const user = users.find(u => u.user_id === roster.owner_id);
+        if (!user) return null;
+        const metadata = user.metadata || {};
+        const teamName = metadata.team_name || user.display_name;
+        const avatar = metadata.avatar ? metadata.avatar : `https://sleepercdn.com/avatars/thumbs/${user.avatar}`;
+        const wins = roster.settings.wins;
+        const losses = roster.settings.losses;
+        const ties = roster.settings.ties;
+        const record = `${wins}-${losses}${ties > 0 ? `-${ties}` : ''}`;
+        const winPct = (wins + ties * 0.5) / (wins + losses + ties) || 0;
+        const fpts = roster.settings.fpts;
+        const waiverPos = roster.settings.waiver_position;
+        return { name: teamName, avatar, record, winPct, fpts, waiverPos, roster_id: roster.roster_id };
+      }).filter(t => t);
+
+      teams.sort((a, b) => {
+        if (a.record == '0-0') return b.waiverPos - a.waiverPos;
+        if (a.winPct !== b.winPct) return a.winPct - b.winPct;
+        return a.fpts - b.fpts;
+      });
+
+      const pickOwners2026 = new Map();
+      for (let i = 1; i <= 12; i++) {
+        pickOwners2026.set(i, i);
+      }
+      tradedPicks.filter(p => p.season === "2026" && p.round === 1).forEach(p => {
+        pickOwners2026.set(p.roster_id, p.owner_id);
+      });
+
+      const odds = [
+        { p1: 30.0, p2: 25.980, p3: 21.001, p4: 23.019, p5: 0.000, p6: 0.000 },
+        { p1: 25.0, p2: 24.031, p3: 21.819, p4: 25.640, p5: 3.510, p6: 0.000 },
+        { p1: 20.0, p2: 20.891, p3: 21.615, p4: 27.053, p5: 10.190, p6: 0.249 },
+        { p1: 15.0, p2: 16.772, p3: 19.305, p4: 24.288, p5: 23.169, p6: 1.467 },
+        { p1: 7.0, p2: 8.535, p3: 11.103, p4: 0.000, p5: 63.130, p6: 10.232 },
+        { p1: 3.0, p2: 3.791, p3: 5.157, p4: 0.000, p5: 0.000, p6: 88.052 },
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 },
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 },
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 },
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 },
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 },
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 }
+      ];
+
+      const dynamicSeeds = teams.map((original_team, index) => {
+        const owner_roster_id = pickOwners2026.get(original_team.roster_id);
+        const owner_team = teams.find(t => t.roster_id === owner_roster_id);
+        const isTraded = owner_roster_id !== original_team.roster_id;
+        const displayName = isTraded ? `${owner_team.name} (via ${original_team.name})` : original_team.name;
+        return { name: displayName, avatar: owner_team.avatar, record: original_team.record, ...odds[index] };
+      });
+
+      dynamicSeeds.splice(6, 0, "separator");
+
+      return dynamicSeeds;
+    }
+
+    function generateCombinations(n, k) {
+      const combinations = [];
+      
+      function backtrack(start, currentCombination) {
+        if (currentCombination.length === k) {
+          combinations.push([...currentCombination]);
+          return;
+        }
+        
+        for (let i = start; i <= n; i++) {
+          currentCombination.push(i);
+          backtrack(i + 1, currentCombination);
+          currentCombination.pop();
+        }
+      }
+      
+      backtrack(1, []);
+      return combinations;
+    }
+
+    function assignPingPongBalls() {
+      const baseCombinations = generateCombinations(10, 3);
+      const allCombinations = [];
+      const multiplier = Math.ceil(1000 / baseCombinations.length);
+      
+      for (let i = 0; i < multiplier; i++) {
+        baseCombinations.forEach(combo => {
+          if (allCombinations.length < 1000) {
+            allCombinations.push([...combo, i]);
+          }
+        });
+      }
+      
+      const teamAssignments = {};
+      const teamCombinationCounts = [
+        { team: 0, count: 300 },
+        { team: 1, count: 250 },
+        { team: 2, count: 200 },
+        { team: 3, count: 150 },
+        { team: 4, count: 70 },
+        { team: 5, count: 30 }
+      ];
+      
+      let assignedCombinations = 0;
+      teamCombinationCounts.forEach(({ team, count }) => {
+        teamAssignments[team] = [];
+        for (let i = 0; i < count; i++) {
+          if (assignedCombinations < allCombinations.length) {
+            teamAssignments[team].push(allCombinations[assignedCombinations]);
+            assignedCombinations++;
+          }
+        }
+      });
+      
+      return { teamAssignments, allCombinations: allCombinations.slice(0, 1000) };
+    }
+
+    function drawPingPongBalls(availableTeams, pickNumber) {
+      const { teamAssignments } = assignPingPongBalls();
+      const combinationPool = [];
+      
+      availableTeams.forEach(team => {
+        if (teamAssignments[team]) {
+          teamAssignments[team].forEach((combo, index) => {
+            combinationPool.push({ combination: combo, team: team, index: index });
+          });
+        }
+      });
+      
+      const drawnEntry = combinationPool[Math.floor(Math.random() * combinationPool.length)];
+      const winningTeam = drawnEntry.team;
+      const teamCombinations = teamAssignments[winningTeam].length;
+      const totalCombinations = combinationPool.length;
+      const winningPercentage = ((teamCombinations / totalCombinations) * 100).toFixed(1);
+      
+      console.log(`🏀 Drawing lottery pick #${pickNumber}:`);
+      console.log(`   Winner: Seed ${winningTeam + 1} (${seeds[winningTeam].name})`);
+      console.log(`   Won with ${teamCombinations}/${totalCombinations} combinations (${winningPercentage}%)`);
+      console.log(`   Drawn combination: [${drawnEntry.combination.join(', ')}]`);
+      
+      return winningTeam;
+    }
+
+    function weightedRandom(teams, pickNumber) {
+      return drawPingPongBalls(teams, pickNumber);
+    }
+
+    function renderTable() {
+      const tbody = document.querySelector("#lottery-table tbody");
+      tbody.innerHTML = "";
+      
+      currentOrder.forEach((idx, pick) => {
+        const seed = seeds[idx];
+        if (seed === "separator") {
+          tbody.innerHTML += `<tr class="separator"><td colspan="10">End of Lottery</td></tr>`;
+          return;
+        }
+
+        const isLotteryPick = lotteryResults.includes(idx) && pick < 3;
+        const origPick = originalOrder.indexOf(idx);
+        let diff = origPick - pick;
+        let movement = "";
+        if (diff > 0) movement = `<span class="arrow-up">↑ ${diff}</span>`;
+        else if (diff < 0) movement = `<span class="arrow-down">↓ ${Math.abs(diff)}</span>`;
+        else movement = `<span class="arrow-same">→ 0</span>`;
+
+        const rowClass = isLotteryPick ? 'class="lottery-pick"' : '';
+        const pickNum = idx < 7 ? pick + 1 : pick;
+
+        tbody.innerHTML += `
+          <tr ${rowClass}>
+            <td>${pickNum}</td>
+            <td><img src="${seed.avatar}" width="24" height="24" style="border-radius:50%; margin-right:8px;vertical-align:middle;">${seed.name}</td>
+            <td>${seed.record}</td>
+            <td>${movement}</td>
+            <td>${seed.p1.toFixed(1)}%</td>
+            <td>${seed.p2.toFixed(1)}%</td>
+            <td>${seed.p3.toFixed(1)}%</td>
+            <td>${seed.p4.toFixed(1)}%</td>
+            <td>${seed.p5.toFixed(1)}%</td>
+            <td>${seed.p6.toFixed(1)}%</td>
+          </tr>
+        `;
+      });
+    }
+
+    function conductLottery() {
+      console.log("🎲 Starting Fantasy Football Draft Lottery Simulation");
+      console.log("================================================");
+      
+      currentOrder = [...originalOrder];
+      lotteryResults = [];
+      
+      let availableTeams = [0, 1, 2, 3, 4, 5];
+      let newOrder = new Array(13);
+      let results = [];
+      
+      for (let pick = 1; pick <= 3; pick++) {
+        console.log(`\n--- LOTTERY PICK #${pick} ---`);
+        console.log(`Available teams: ${availableTeams.map(t => `Seed ${t + 1}`).join(', ')}`);
+        
+        const selectedTeam = weightedRandom(availableTeams, pick);
+        newOrder[pick - 1] = selectedTeam;
+        lotteryResults.push(selectedTeam);
+        results.push(selectedTeam);
+        
+        availableTeams = availableTeams.filter(team => team !== selectedTeam);
+        
+        console.log(`✅ Pick #${pick} goes to: Seed ${selectedTeam + 1} (${seeds[selectedTeam].name})`);
+      }
+      
+      console.log(`\n--- REMAINING LOTTERY TEAMS ---`);
+      let remainingLotterySpot = 3;
+      for (let i = 0; i < 6; i++) {
+        if (!lotteryResults.includes(i)) {
+          newOrder[remainingLotterySpot] = i;
+          console.log(`Pick #${remainingLotterySpot + 1}: Seed ${i + 1} (${seeds[i].name}) - stays in original position`);
+          remainingLotterySpot++;
+        }
+      }
+      
+      newOrder[6] = 6;
+      for (let i = 7; i < 13; i++) {
+        newOrder[i] = i;
+      }
+      
+      console.log("\n🏆 FINAL DRAFT ORDER:");
+      console.log("================================================");
+      for (let i = 0; i < 6; i++) {
+        const teamIdx = newOrder[i];
+        const team = seeds[teamIdx];
+        const movement = i - teamIdx;
+        const movementText = movement > 0 ? `(↑${movement})` : movement < 0 ? `(↓${Math.abs(movement)})` : '(→)';
+        console.log(`Pick #${i + 1}: ${team.name} ${movementText}`);
+      }
+      console.log("================================================");
+      
+      currentOrder = newOrder;
+      return results;
+    }
+
+    function simulateLottery() {
+      conductLottery();
+      renderTable();
+    }
+
+    function animatedLottery() {
+      const results = conductLottery();
+      animationState = {
+        active: true,
+        currentPick: 6,
+        results: results,
+        cardFlipped: false
+      };
+      
+      document.getElementById('animated-btn').disabled = true;
+      showLotteryReveal();
+    }
+
+    function showLotteryReveal() {
+      const overlay = document.getElementById('lottery-reveal');
+      const card = document.getElementById('reveal-card');
+      
+      overlay.style.display = 'flex';
+      card.classList.remove('flipped');
+      animationState.cardFlipped = false;
+      
+      setupRevealCard();
+    }
+
+    function setupRevealCard() {
+      const pick = animationState.currentPick;
+      const projectedTeamIdx = pick - 1;
+      const projectedTeam = seeds[projectedTeamIdx];
+      const actualTeamIdx = currentOrder[pick - 1];
+      const actualTeam = seeds[actualTeamIdx];
+      
+      document.getElementById('reveal-title').textContent = `Pick #${pick}`;
+      document.getElementById('projected-team').innerHTML = `<img src="${projectedTeam.avatar}" width="32" height="32" style="border-radius:50%; margin-bottom:6px;"> ${projectedTeam.name}`;
+      document.getElementById('projected-record').textContent = projectedTeam.record;
+      document.getElementById('actual-team').innerHTML = `<img src="${actualTeam.avatar}" width="32" height="32" style="border-radius:50%; margin-bottom:6px;"> ${actualTeam.name}`;
+      document.getElementById('actual-record').textContent = actualTeam.record;
+      
+      document.getElementById('reveal-comment').textContent = 'Tap to reveal!';
+      document.getElementById('continue-btn').style.display = 'none';
+      document.getElementById('skip-btn').style.display = 'block';
+    }
+
+    function flipCard() {
+      if (animationState.cardFlipped) return;
+      
+      const card = document.getElementById('reveal-card');
+      card.classList.add('flipped');
+      animationState.cardFlipped = true;
+      
+    //   setTimeout(() => {
+    //     showRevealComment();
+    //   }, 800);
+      document.getElementById('reveal-comment').textContent = "";
+      document.getElementById('continue-btn').style.display = 'block';
+      document.getElementById('skip-btn').style.display = 'none';
+    }
+
+    function showRevealComment() {
+      const pick = animationState.currentPick;
+      
+      if (pick > 3) {
+        const nonLotteryOrder = [0, 1, 2, 3, 4, 5].filter(i => !animationState.results.includes(i));
+        const teamIdx = nonLotteryOrder[pick - 4];
+        const team = seeds[teamIdx];
+        document.getElementById('reveal-comment').textContent = 
+          `${team.name} stays at pick #${pick} (not in lottery).`;
+      } else {
+        const projectedTeamIdx = pick - 1;
+        const actualTeamIdx = animationState.results[pick - 1];
+        const actualTeam = seeds[actualTeamIdx];
+        
+        let comment = '';
+        if (actualTeamIdx === projectedTeamIdx) {
+          comment = `No surprise! ${actualTeam.name} stays at pick #${pick}.`;
+        } else if (actualTeamIdx > projectedTeamIdx) {
+          const movement = actualTeamIdx - projectedTeamIdx + 1;
+          comment = `Wow! ${actualTeam.name} jumps ${movement} spots to pick #${pick}!`;
+        } else {
+          comment = `${actualTeam.name} secures pick #${pick}!`;
+        }
+        
+        document.getElementById('reveal-comment').textContent = comment;
+      }
+      
+      document.getElementById('continue-btn').style.display = 'block';
+      document.getElementById('skip-btn').style.display = 'none';
+    }
+
+    function nextReveal() {
+      animationState.currentPick--;
+      
+      if (animationState.currentPick < 1) {
+        finishAnimation();
+      } else {
+        const card = document.getElementById('reveal-card');
+        card.style.transition = 'none';
+        card.classList.remove('flipped');
+        animationState.cardFlipped = false;
+        card.offsetHeight;
+        card.style.transition = 'transform 0.8s';
+        setupRevealCard();
+      }
+    }
+
+    function skipAnimation() {
+      finishAnimation();
+    }
+
+    function finishAnimation() {
+      document.getElementById('lottery-reveal').style.display = 'none';
+      animationState.active = false;
+      document.getElementById('animated-btn').disabled = false;
+      renderTable();
+    }
+
+    function resetLottery() {
+      currentOrder = [...originalOrder];
+      lotteryResults = [];
+      animationState.active = false;
+      document.getElementById('animated-btn').disabled = false;
+      renderTable();
+    }
+
+    function updateCountdown() {
+      const target = new Date("Dec 30, 2025 00:00:00").getTime();
+      const now = new Date().getTime();
+      const diff = target - now;
+      if (diff < 0) {
+        document.getElementById("countdown").innerHTML = "🏈 Draft Day!";
+        return;
+      }
+      const days = Math.floor(diff / (1000*60*60*24));
+      const hours = Math.floor((diff % (1000*60*60*24))/(1000*60*60));
+      const minutes = Math.floor((diff % (1000*60*60))/(1000*60));
+      const seconds = Math.floor((diff % (1000*60))/1000);
+      document.getElementById("countdown").innerHTML =
+        `⏰ ${days}d ${hours}h ${minutes}m ${seconds}s until 2026 Draft Lottery`;
+    }
+
+    (async () => {
+      seeds = await loadData();
+      originalOrder = seeds.map((t, i) => i);
+      currentOrder = [...originalOrder];
+      setInterval(updateCountdown, 1000);
+      resetLottery();
+    })();
+  </script>
+</body>
+</html>
