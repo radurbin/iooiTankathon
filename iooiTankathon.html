@@ -150,14 +150,19 @@
       font-size: 0.9rem;
     }
 
-    tr:hover td {
+    /* tr:hover td {
       background: #34344a;
-    }
+    } */
 
-    .lottery-pick td {
+    /* .lottery-pick td {
       background: #3e3e5a;
       font-weight: 600;
-    }
+    } */
+
+    /* .playoff-pick td {
+      background: #3e3e5a;
+      font-weight: 600;
+    } */
 
     .separator td {
       background: #3a3a4a;
@@ -409,12 +414,14 @@
     let originalOrder;
     let currentOrder;
     let lotteryResults = [];
+    let playoffAssignments = {};
     let animationState = {
       active: false,
       currentPick: 0,
       results: [],
       cardFlipped: false
     };
+    let playoffTeams = [];
 
     async function loadData() {
       const rostersResponse = await fetch('https://api.sleeper.app/v1/league/1180235542497525760/rosters');
@@ -423,6 +430,8 @@
       const users = await usersResponse.json();
       const tradedResponse = await fetch('https://api.sleeper.app/v1/league/1180235542497525760/traded_picks');
       const tradedPicks = await tradedResponse.json();
+      const winnersBracketResponse = await fetch('https://api.sleeper.app/v1/league/1180235542497525760/winners_bracket');
+      const winnersBracket = await winnersBracketResponse.json();
 
       const teams = rosters.map(roster => {
         const user = users.find(u => u.user_id === roster.owner_id);
@@ -461,25 +470,121 @@
         { p1: 15.0, p2: 16.772, p3: 19.305, p4: 24.288, p5: 23.169, p6: 1.467 },
         { p1: 7.0, p2: 8.535, p3: 11.103, p4: 0.000, p5: 63.130, p6: 10.232 },
         { p1: 3.0, p2: 3.791, p3: 5.157, p4: 0.000, p5: 0.000, p6: 88.052 },
-        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 },
-        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 },
-        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 },
-        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 },
-        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 },
-        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 100.000 }
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 0.000 },
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 0.000 },
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 0.000 },
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 0.000 },
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 0.000 },
+        { p1: 0.000, p2: 0.000, p3: 0.000, p4: 0.000, p5: 0.000, p6: 0.000 }
       ];
+
+      // Map roster_id to seed index
+      const rosterIdToIndex = new Map();
+      teams.forEach((team, index) => {
+        rosterIdToIndex.set(team.roster_id, index);
+      });
+
+      // Process winners bracket to determine playoff assignments
+      playoffAssignments = {};
+      playoffTeams = [];
+      let m1Winner, m1Loser, m2Winner, m2Loser, m3Winner, m3Loser, m4Winner, m4Loser;
+
+      winnersBracket.forEach(match => {
+        if (match.m === 1) { // Seed 4 vs Seed 5
+          if (match.w && match.l) {
+            m1Winner = rosterIdToIndex.get(match.w);
+            m1Loser = rosterIdToIndex.get(match.l);
+          } else {
+            const t1Index = rosterIdToIndex.get(match.t1); // Team 6 (Seed 4)
+            const t2Index = rosterIdToIndex.get(match.t2); // Team 2 (Seed 5)
+            m1Winner = t1Index;
+            m1Loser = t2Index;
+          }
+        } else if (match.m === 2) { // Seed 6 vs Seed 3
+          if (match.w && match.l) {
+            m2Winner = rosterIdToIndex.get(match.w);
+            m2Loser = rosterIdToIndex.get(match.l);
+          } else {
+            const t1Index = rosterIdToIndex.get(match.t1); // Team 10 (Seed 3)
+            const t2Index = rosterIdToIndex.get(match.t2); // Team 5 (Seed 6)
+            m2Winner = t2Index;
+            m2Loser = t1Index;
+          }
+        } else if (match.m === 3) { // Seed 1 vs Winner of m=1 (Seed 4)
+          if (match.w && match.l) {
+            m3Winner = rosterIdToIndex.get(match.w);
+            m3Loser = rosterIdToIndex.get(match.l);
+          } else {
+            const t1Index = rosterIdToIndex.get(match.t1); // Team 1 (Seed 1)
+            m3Winner = t1Index; // Seed 1 vs Winner of m=1
+            m3Loser = m1Winner;
+          }
+        } else if (match.m === 4) { // Seed 2 vs Winner of m=2 (Seed 3)
+          if (match.w && match.l) {
+            m4Winner = rosterIdToIndex.get(match.w);
+            m4Loser = rosterIdToIndex.get(match.l);
+          } else {
+            const t1Index = rosterIdToIndex.get(match.t1); // Team 8 (Seed 2)
+            m4Winner = t1Index;
+            m4Loser = m2Winner;
+          }
+        } else if (match.p === 1) { // Championship: Winner of m=3 vs Winner of m=4
+          if (match.w && match.l) {
+            playoffAssignments[rosterIdToIndex.get(match.w)] = { pick: 12, rationale: "Winner of Championship" };
+            playoffAssignments[rosterIdToIndex.get(match.l)] = { pick: 11, rationale: "Loser of Championship" };
+            playoffTeams.push(rosterIdToIndex.get(match.w), rosterIdToIndex.get(match.l));
+          } else {
+            const champWinner = m3Winner;
+            const champLoser = m4Winner;
+            playoffAssignments[champWinner] = { pick: 12, rationale: "Winner of Championship (Projected)" };
+            playoffAssignments[champLoser] = { pick: 11, rationale: "Loser of Championship (Projected)" };
+            playoffTeams.push(champWinner, champLoser);
+          }
+        } else if (match.p === 3) { // 3rd place: Loser of m=4 vs Loser of m=3
+          if (match.w && match.l) {
+            playoffAssignments[rosterIdToIndex.get(match.w)] = { pick: 9, rationale: "Winner of 3rd Place Game" };
+            playoffAssignments[rosterIdToIndex.get(match.l)] = { pick: 10, rationale: "Loser of 3rd Place Game" };
+            playoffTeams.push(rosterIdToIndex.get(match.w), rosterIdToIndex.get(match.l));
+          } else {
+            const thirdWinner = m4Loser;
+            const thirdLoser = m3Loser;
+            playoffAssignments[thirdWinner] = { pick: 9, rationale: "Winner of 3rd Place Game (Projected)" };
+            playoffAssignments[thirdLoser] = { pick: 10, rationale: "Loser of 3rd Place Game (Projected)" };
+            playoffTeams.push(thirdWinner, thirdLoser);
+          }
+        } else if (match.p === 5) { // 5th place: Loser of m=1 vs Loser of m=2
+          if (match.w && match.l) {
+            playoffAssignments[rosterIdToIndex.get(match.w)] = { pick: 7, rationale: "Winner of 5th Place Game" };
+            playoffAssignments[rosterIdToIndex.get(match.l)] = { pick: 8, rationale: "Loser of 5th Place Game" };
+            playoffTeams.push(rosterIdToIndex.get(match.w), rosterIdToIndex.get(match.l));
+          } else {
+            const fifthWinner = m1Loser;
+            const fifthLoser = m2Loser;
+            playoffAssignments[fifthWinner] = { pick: 7, rationale: "Winner of 5th Place Game (Projected)" };
+            playoffAssignments[fifthLoser] = { pick: 8, rationale: "Loser of 5th Place Game (Projected)" };
+            playoffTeams.push(fifthWinner, fifthLoser);
+          }
+        }
+      });
 
       const dynamicSeeds = teams.map((original_team, index) => {
         const owner_roster_id = pickOwners2026.get(original_team.roster_id);
         const owner_team = teams.find(t => t.roster_id === owner_roster_id);
         const isTraded = owner_roster_id !== original_team.roster_id;
         const displayName = isTraded ? `${owner_team.name} (via ${original_team.name})` : original_team.name;
-        return { name: displayName, avatar: owner_team.avatar, record: original_team.record, ...odds[index] };
+        return { 
+          name: displayName, 
+          avatar: owner_team.avatar, 
+          record: original_team.record, 
+          roster_id: original_team.roster_id, 
+          ...odds[index], 
+          playoff: playoffAssignments[index] || null 
+        };
       });
 
       dynamicSeeds.splice(6, 0, "separator");
 
-      return dynamicSeeds;
+      return { seeds: dynamicSeeds, playoffTeams };
     }
 
     function generateCombinations(n, k) {
@@ -572,42 +677,154 @@
     function renderTable() {
       const tbody = document.querySelector("#lottery-table tbody");
       tbody.innerHTML = "";
-      
+
+      // Define the desired rationale order
+      const rationaleOrder = [
+        "Winner of 5th Place Game (Projected)",
+        "Winner of 5th Place Game",
+        "Loser of 5th Place Game (Projected)",
+        "Loser of 5th Place Game",
+        "Winner of 3rd Place Game (Projected)",
+        "Winner of 3rd Place Game",
+        "Loser of 3rd Place Game (Projected)",
+        "Loser of 3rd Place Game",
+        "Loser of Championship (Projected)",
+        "Loser of Championship",
+        "Winner of Championship (Projected)",
+        "Winner of Championship"
+      ];
+
+      // Collect playoff teams and their indices
+      const playoffTeamsWithIndices = [];
+      currentOrder.forEach((idx, pick) => {
+        if (seeds[idx].playoff && pick >= 6) {
+          playoffTeamsWithIndices.push({ idx, pick });
+        }
+      });
+
+      // Sort playoff teams by rationale
+      playoffTeamsWithIndices.sort((a, b) => {
+        const aRationale = seeds[a.idx].playoff.rationale;
+        const bRationale = seeds[b.idx].playoff.rationale;
+        return rationaleOrder.indexOf(aRationale) - rationaleOrder.indexOf(bRationale);
+      });
+
+      // Render lottery and non-lottery teams (picks 1-6)
+      let separatorAdded = false;
       currentOrder.forEach((idx, pick) => {
         const seed = seeds[idx];
         if (seed === "separator") {
-          tbody.innerHTML += `<tr class="separator"><td colspan="10">End of Lottery</td></tr>`;
+          tbody.innerHTML += `<tr class="separator"><td colspan="11">End of Lottery</td></tr>`;
+          separatorAdded = true;
           return;
         }
+        if (pick < 6) { // Render non-playoff teams
+          const isLotteryPick = lotteryResults.includes(idx) && pick < 3;
+          const isPlayoffPick = seed.playoff && pick >= 6;
+          const origPick = originalOrder.indexOf(idx);
+          let diff = isPlayoffPick ? 0 : origPick - pick;
+          let movement = "";
+          if (diff > 0) movement = `<span class="arrow-up">↑ ${diff}</span>`;
+          else if (diff < 0) movement = `<span class="arrow-down">↓ ${Math.abs(diff)}</span>`;
+          else movement = `<span class="arrow-same">→ 0</span>`;
 
-        const isLotteryPick = lotteryResults.includes(idx) && pick < 3;
+          const rowClass = isLotteryPick ? 'class="lottery-pick"' : isPlayoffPick ? 'class="playoff-pick"' : '';
+          const pickNum = pick + 1;
+          const rationale = seed.playoff ? seed.playoff.rationale : (pickNum <= 3 ? "Lottery" : "Non-Lottery");
+
+          const borderStyle = pick < 3 
+            ? "border: solid yellow; position: relative;" 
+            : "border: solid blue; position: relative;";
+
+            tbody.innerHTML += `
+            <tr ${rowClass} style="${borderStyle}">
+                <!-- overlay label cell -->
+                <td colspan="11" style="position: relative; padding: 0; border: none;">
+                <div style="position:absolute; top: -10px; left:50%; transform: translateX(-50%);
+                            background:${pick < 3 ? "yellow; color: black;" : "blue; color:white;"}
+                            padding:2px 6px; border-radius:4px; font-size:12px;">
+                    ${rationale}
+                </div>
+                </td>
+            </tr>
+
+            <tr ${rowClass} style="${borderStyle}">
+                <td>${pickNum}</td>
+                <td><img src="${seed.avatar}" width="24" height="24" style="border-radius:50%; margin-right:8px;vertical-align:middle;">${seed.name}</td>
+                <td>${seed.record}</td>
+                <td>${movement}</td>
+                <td>${seed.p1.toFixed(1)}%</td>
+                <td>${seed.p2.toFixed(1)}%</td>
+                <td>${seed.p3.toFixed(1)}%</td>
+                <td>${seed.p4.toFixed(1)}%</td>
+                <td>${seed.p5.toFixed(1)}%</td>
+                <td>${seed.p6.toFixed(1)}%</td>
+            </tr>
+            `;
+        }
+      });
+
+      // Render playoff teams in custom rationale order
+      if (!separatorAdded) {
+        tbody.innerHTML += `<tr class="separator"><td colspan="11">End of Lottery</td></tr>`;
+      }
+
+      playoffTeamsWithIndices.forEach(({ idx, pick }) => {
+        const seed = seeds[idx];
+        const isPlayoffPick = true;
         const origPick = originalOrder.indexOf(idx);
-        let diff = origPick - pick;
-        let movement = "";
-        if (diff > 0) movement = `<span class="arrow-up">↑ ${diff}</span>`;
-        else if (diff < 0) movement = `<span class="arrow-down">↓ ${Math.abs(diff)}</span>`;
-        else movement = `<span class="arrow-same">→ 0</span>`;
+        let diff = 0; // No movement for playoff teams
+        let movement = `<span class="arrow-same">→ 0</span>`;
+        const rowClass = 'class="playoff-pick"';
+        const pickNum = seed.playoff.pick;
+        const rationale = seed.playoff.rationale;
 
-        const rowClass = isLotteryPick ? 'class="lottery-pick"' : '';
-        const pickNum = idx < 7 ? pick + 1 : pick;
+        let color = 'pink';
 
+        if (rationale[10] == '5') {
+          color = "#90EE90";
+        } else if (rationale[10] == '3') {
+          color = "#CD7F32";
+        } else if (rationale[10] == 'C') {
+          color = "#FFD700";
+        } else if (rationale[9] == '5') {
+            color = "#F08080";
+        } else if (rationale[9] == '3') {
+            color = "#87CEFA";
+        } else if (rationale[9] == 'C') {
+            color = "#C0C0C0";
+        }
+
+        const borderStyle = rationale[0] == 'W'
+        ? `border: solid ${color}; position: relative;`
+        : `border: solid ${color}; position: relative;`;
         tbody.innerHTML += `
-          <tr ${rowClass}>
-            <td>${pickNum}</td>
-            <td><img src="${seed.avatar}" width="24" height="24" style="border-radius:50%; margin-right:8px;vertical-align:middle;">${seed.name}</td>
-            <td>${seed.record}</td>
-            <td>${movement}</td>
-            <td>${seed.p1.toFixed(1)}%</td>
-            <td>${seed.p2.toFixed(1)}%</td>
-            <td>${seed.p3.toFixed(1)}%</td>
-            <td>${seed.p4.toFixed(1)}%</td>
-            <td>${seed.p5.toFixed(1)}%</td>
-            <td>${seed.p6.toFixed(1)}%</td>
+          <tr ${rowClass} style="${borderStyle}">
+                <!-- overlay label cell -->
+                <td colspan="11" style="position: relative; padding: 0; border: none;">
+                <div style="position:absolute; top: -10px; left:50%; transform: translateX(-50%);
+                            background:${color}; color:black;
+                            padding:2px 6px; border-radius:4px; font-size:12px;">
+                    ${rationale}
+                </div>
+                </td>
+            </tr>
+            <tr ${rowClass} style="${borderStyle}">
+                <td>${pickNum}</td>
+                <td><img src="${seed.avatar}" width="24" height="24" style="border-radius:50%; margin-right:8px;vertical-align:middle;">${seed.name}</td>
+                <td>${seed.record}</td>
+                <td>${movement}</td>
+                <td>${seed.p1.toFixed(1)}%</td>
+                <td>${seed.p2.toFixed(1)}%</td>
+                <td>${seed.p3.toFixed(1)}%</td>
+                <td>${seed.p4.toFixed(1)}%</td>
+                <td>${seed.p5.toFixed(1)}%</td>
+                <td>${seed.p6.toFixed(1)}%</td>
+            </tr>
           </tr>
         `;
       });
     }
-
     function conductLottery() {
       console.log("🎲 Starting Fantasy Football Draft Lottery Simulation");
       console.log("================================================");
@@ -615,7 +832,7 @@
       currentOrder = [...originalOrder];
       lotteryResults = [];
       
-      let availableTeams = [0, 1, 2, 3, 4, 5];
+      let availableTeams = [0, 1, 2, 3, 4, 5].filter(i => !playoffTeams.includes(i));
       let newOrder = new Array(13);
       let results = [];
       
@@ -636,26 +853,30 @@
       console.log(`\n--- REMAINING LOTTERY TEAMS ---`);
       let remainingLotterySpot = 3;
       for (let i = 0; i < 6; i++) {
-        if (!lotteryResults.includes(i)) {
+        if (!lotteryResults.includes(i) && !playoffTeams.includes(i)) {
           newOrder[remainingLotterySpot] = i;
           console.log(`Pick #${remainingLotterySpot + 1}: Seed ${i + 1} (${seeds[i].name}) - stays in original position`);
           remainingLotterySpot++;
         }
       }
       
-      newOrder[6] = 6;
-      for (let i = 7; i < 13; i++) {
-        newOrder[i] = i;
+      newOrder[6] = 6; // Separator
+      for (let i = 0; i < seeds.length; i++) {
+        if (seeds[i].playoff) {
+          newOrder[seeds[i].playoff.pick - 1] = i;
+        }
       }
       
       console.log("\n🏆 FINAL DRAFT ORDER:");
       console.log("================================================");
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < seeds.length - 1; i++) {
+        if (i === 6) continue; // Skip separator
         const teamIdx = newOrder[i];
         const team = seeds[teamIdx];
-        const movement = i - teamIdx;
+        const movement = i < 6 ? i - originalOrder.indexOf(teamIdx) : 0;
         const movementText = movement > 0 ? `(↑${movement})` : movement < 0 ? `(↓${Math.abs(movement)})` : '(→)';
-        console.log(`Pick #${i + 1}: ${team.name} ${movementText}`);
+        const rationale = team.playoff ? team.playoff.rationale : (i < 3 ? "Lottery" : i < 6 ? "Non-Lottery" : "");
+        console.log(`Pick #${i + 1}: ${team.name} ${movementText} - ${rationale}`);
       }
       console.log("================================================");
       
@@ -717,23 +938,20 @@
       card.classList.add('flipped');
       animationState.cardFlipped = true;
       
-    //   setTimeout(() => {
-    //     showRevealComment();
-    //   }, 800);
-      document.getElementById('reveal-comment').textContent = "";
-      document.getElementById('continue-btn').style.display = 'block';
-      document.getElementById('skip-btn').style.display = 'none';
+      setTimeout(() => {
+        showRevealComment();
+      }, 800);
     }
 
     function showRevealComment() {
       const pick = animationState.currentPick;
       
       if (pick > 3) {
-        const nonLotteryOrder = [0, 1, 2, 3, 4, 5].filter(i => !animationState.results.includes(i));
-        const teamIdx = nonLotteryOrder[pick - 4];
+        const nonLotteryOrder = [0, 1, 2, 3, 4, 5].filter(i => !animationState.results.includes(i) && !playoffTeams.includes(i));
+        const teamIdx = pick <= 6 ? nonLotteryOrder[pick - 4] : currentOrder[pick - 1];
         const team = seeds[teamIdx];
-        document.getElementById('reveal-comment').textContent = 
-          `${team.name} stays at pick #${pick} (not in lottery).`;
+        const rationale = team.playoff ? team.playoff.rationale : `Stays at pick #${pick} (not in lottery).`;
+        // document.getElementById('reveal-comment').textContent = `${team.name} - ${rationale}`;
       } else {
         const projectedTeamIdx = pick - 1;
         const actualTeamIdx = animationState.results[pick - 1];
@@ -749,7 +967,7 @@
           comment = `${actualTeam.name} secures pick #${pick}!`;
         }
         
-        document.getElementById('reveal-comment').textContent = comment;
+        // document.getElementById('reveal-comment').textContent = comment;
       }
       
       document.getElementById('continue-btn').style.display = 'block';
@@ -808,7 +1026,9 @@
     }
 
     (async () => {
-      seeds = await loadData();
+      const { seeds: loadedSeeds, playoffTeams: loadedPlayoffTeams } = await loadData();
+      seeds = loadedSeeds;
+      playoffTeams = loadedPlayoffTeams;
       originalOrder = seeds.map((t, i) => i);
       currentOrder = [...originalOrder];
       setInterval(updateCountdown, 1000);
