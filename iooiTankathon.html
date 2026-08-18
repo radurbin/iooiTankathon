@@ -840,6 +840,7 @@
             <th>Pick</th>
             <th>Seed</th>
             <th>Record</th>
+            <th>Max PF</th>
             <th>Δ</th>
             <th>Pick 1</th>
             <th>Pick 2</th>
@@ -1204,13 +1205,14 @@
         const owner_team = teams.find(t => t.roster_id === owner_roster_id);
         const isTraded = owner_roster_id !== original_team.roster_id;
         const displayName = isTraded ? `${owner_team.name} (via ${original_team.name})` : original_team.name;
-        return { 
-          name: displayName, 
-          avatar: owner_team.avatar, 
-          record: original_team.record, 
-          roster_id: original_team.roster_id, 
-          ...odds[index], 
-          playoff: playoffAssignments[index] || null 
+        return {
+          name: displayName,
+          avatar: owner_team.avatar,
+          record: original_team.record,
+          maxPtsFor: original_team.maxPtsFor,
+          roster_id: original_team.roster_id,
+          ...odds[index],
+          playoff: playoffAssignments[index] || null
         };
       });
 
@@ -1346,7 +1348,7 @@
       currentOrder.forEach((idx, pick) => {
         const seed = seeds[idx];
         if (seed === "separator") {
-          tbody.innerHTML += `<tr class="separator"><td colspan="11">End of Lottery</td></tr>`;
+          tbody.innerHTML += `<tr class="separator"><td colspan="12">End of Lottery</td></tr>`;
           separatorAdded = true;
           return;
         }
@@ -1371,7 +1373,7 @@
             tbody.innerHTML += `
             <tr ${rowClass} style="${borderStyle}">
                 <!-- overlay label cell -->
-                <td colspan="11" style="position: relative; padding: 0; border: none;">
+                <td colspan="12" style="position: relative; padding: 0; border: none;">
                 <div style="position:absolute; top: -10px; left:50%; transform: translateX(-50%);
                             background:${pick < 3 ? "yellow; color: black;" : "blue; color:white;"}
                             padding:2px 6px; border-radius:4px; font-size:12px;">
@@ -1384,6 +1386,7 @@
                 <td>${pickNum}</td>
                 <td><img src="${seed.avatar}" width="24" height="24" style="border-radius:50%; margin-right:8px;vertical-align:middle;">${seed.name}</td>
                 <td>${seed.record}</td>
+                <td>${seed.maxPtsFor.toFixed(1)}</td>
                 <td>${movement}</td>
                 <td>${seed.p1.toFixed(1)}%</td>
                 <td>${seed.p2.toFixed(1)}%</td>
@@ -1398,7 +1401,7 @@
 
       // Render playoff teams in custom rationale order
       if (!separatorAdded) {
-        tbody.innerHTML += `<tr class="separator"><td colspan="11">End of Lottery</td></tr>`;
+        tbody.innerHTML += `<tr class="separator"><td colspan="12">End of Lottery</td></tr>`;
       }
 
       playoffTeamsWithIndices.forEach(({ idx, pick }) => {
@@ -1433,7 +1436,7 @@
         tbody.innerHTML += `
           <tr ${rowClass} style="${borderStyle}">
                 <!-- overlay label cell -->
-                <td colspan="11" style="position: relative; padding: 0; border: none;">
+                <td colspan="12" style="position: relative; padding: 0; border: none;">
                 <div style="position:absolute; top: -10px; left:50%; transform: translateX(-50%);
                             background:${color}; color:black;
                             padding:2px 6px; border-radius:4px; font-size:12px;">
@@ -1445,6 +1448,7 @@
                 <td>${pickNum}</td>
                 <td><img src="${seed.avatar}" width="24" height="24" style="border-radius:50%; margin-right:8px;vertical-align:middle;">${seed.name}</td>
                 <td>${seed.record}</td>
+                <td>${seed.maxPtsFor.toFixed(1)}</td>
                 <td>${movement}</td>
                 <td>${seed.p1.toFixed(1)}%</td>
                 <td>${seed.p2.toFixed(1)}%</td>
