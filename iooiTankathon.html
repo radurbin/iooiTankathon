@@ -898,7 +898,7 @@
             </p>
             <ul>
               <li><strong>1,000 ping pong balls</strong> are placed in the lottery machine</li>
-              <li><strong id="team-1-name">Team 1</strong> (worst record) receives <strong>300 balls</strong> (30% chance)</li>
+              <li><strong id="team-1-name">Team 1</strong> (lowest Max Points For) receives <strong>300 balls</strong> (30% chance)</li>
               <li><strong id="team-2-name">Team 2</strong> receives <strong>250 balls</strong> (25% chance)</li>
               <li><strong id="team-3-name">Team 3</strong> receives <strong>200 balls</strong> (20% chance)</li>
               <li><strong id="team-4-name">Team 4</strong> receives <strong>150 balls</strong> (15% chance)</li>
@@ -917,8 +917,8 @@
               Remaining Picks
             </p>
             <ul>
-              <li><strong>Picks 4-6:</strong> Remaining lottery teams are assigned picks in reverse order of their record</li>
-              <li><strong>Picks 7-12:</strong> Determined by playoff results</li>
+              <li><strong>Picks 4-6:</strong> Remaining lottery teams are assigned picks in reverse order of Max Points For (lowest first)</li>
+              <li><strong>Picks 7-12:</strong> Determined by playoff results. The 6th and final playoff seed goes to whichever non-top-5 team scored the most total points, not simply the next-best record</li>
             </ul>
           </div>
         </div>
@@ -1042,7 +1042,7 @@
       const winnersBracketResponse = await fetch('https://api.sleeper.app/v1/league/1314038209503567872/winners_bracket');
       const winnersBracket = await winnersBracketResponse.json();
 
-      const teams = rosters.map(roster => {
+      const rawTeams = rosters.map(roster => {
         const user = users.find(u => u.user_id === roster.owner_id);
         if (!user) return null;
         const metadata = user.metadata || {};
@@ -1053,16 +1053,39 @@
         const ties = roster.settings.ties;
         const record = `${wins}-${losses}${ties > 0 ? `-${ties}` : ''}`;
         const winPct = (wins + ties * 0.5) / (wins + losses + ties) || 0;
-        const fpts = roster.settings.fpts;
+        const fpts = roster.settings.fpts + (roster.settings.fpts_decimal || 0) / 100;
+        // "Max Points For" - Sleeper's optimal/potential lineup points for the season
+        const maxPtsFor = (roster.settings.ppts || 0) + (roster.settings.ppts_decimal || 0) / 100;
         const waiverPos = roster.settings.waiver_position;
-        return { name: teamName, avatar, record, winPct, fpts, waiverPos, roster_id: roster.roster_id };
+        return { name: teamName, avatar, record, winPct, fpts, maxPtsFor, waiverPos, roster_id: roster.roster_id };
       }).filter(t => t);
 
-      teams.sort((a, b) => {
-        if (a.record == '0-0') return b.waiverPos - a.waiverPos;
-        if (a.winPct !== b.winPct) return a.winPct - b.winPct;
-        return a.fpts - b.fpts;
+      // Rank all 12 teams by record (win% then total points), best team first
+      const byRecordBestFirst = [...rawTeams].sort((a, b) => {
+        if (a.record === '0-0') return a.waiverPos - b.waiverPos;
+        if (a.winPct !== b.winPct) return b.winPct - a.winPct;
+        return b.fpts - a.fpts;
       });
+
+      let teams;
+      if (rawTeams.every(t => t.record === '0-0')) {
+        // Preseason: no games played, nothing to rank teams on yet
+        teams = [...byRecordBestFirst].reverse();
+      } else {
+        const top5 = byRecordBestFirst.slice(0, 5);
+        const rankedSixToTwelve = byRecordBestFirst.slice(5);
+
+        // Rule: the 6th (final) playoff seed goes to whoever scored the most total
+        // points among teams ranked 6th-12th, not simply the 6th-best record
+        const sixthSeed = rankedSixToTwelve.reduce((best, t) => t.fpts > best.fpts ? t : best);
+        const lotteryPool = rankedSixToTwelve.filter(t => t !== sixthSeed);
+
+        // Rule: the 6 lottery teams are ordered by lowest Max Points For (worst first)
+        lotteryPool.sort((a, b) => a.maxPtsFor - b.maxPtsFor);
+
+        const projectedPlayoffTeams = [...top5, sixthSeed].sort((a, b) => a.winPct - b.winPct || a.fpts - b.fpts);
+        teams = [...lotteryPool, ...projectedPlayoffTeams];
+      }
 
       const pickOwners2027 = new Map();
       for (let i = 1; i <= 12; i++) {
