@@ -859,7 +859,7 @@
       <div class="spotlight" style="top: 10%; left: 20%;"></div>
       <div class="spotlight" style="top: 40%; right: 15%;"></div>
 
-      <div class="reveal-title" id="reveal-title">2026 DRAFT LOTTERY</div>
+      <div class="reveal-title" id="reveal-title">2027 DRAFT LOTTERY</div>
 
       <!-- Welcome Screen -->
       <div id="welcome-screen" class="lottery-stage">
@@ -873,7 +873,7 @@
           <!-- Title section -->
           <div style="text-align: center; margin-top: 1rem;">
             <h2 style="font-size: 3rem; margin: 0 0 1rem 0; color: #00ddeb; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 20px rgba(0, 221, 235, 0.5);">
-              2026 Dynasty iooi Draft Lottery
+              2027 Dynasty iooi Draft Lottery
             </h2>
             <div style="width: 300px; height: 3px; background: linear-gradient(90deg, transparent, #6b4eff, #00ddeb, #6b4eff, transparent); margin: 0 auto 1.5rem auto;"></div>
             <p style="font-size: 1.4rem; color: #ffffff; font-weight: 500; margin-bottom: 0.5rem;">
@@ -1033,13 +1033,13 @@
     let playoffTeams = [];
 
     async function loadData() {
-      const rostersResponse = await fetch('https://api.sleeper.app/v1/league/1180235542497525760/rosters');
+      const rostersResponse = await fetch('https://api.sleeper.app/v1/league/1314038209503567872/rosters');
       const rosters = await rostersResponse.json();
-      const usersResponse = await fetch('https://api.sleeper.app/v1/league/1180235542497525760/users');
+      const usersResponse = await fetch('https://api.sleeper.app/v1/league/1314038209503567872/users');
       const users = await usersResponse.json();
-      const tradedResponse = await fetch('https://api.sleeper.app/v1/league/1180235542497525760/traded_picks');
+      const tradedResponse = await fetch('https://api.sleeper.app/v1/league/1314038209503567872/traded_picks');
       const tradedPicks = await tradedResponse.json();
-      const winnersBracketResponse = await fetch('https://api.sleeper.app/v1/league/1180235542497525760/winners_bracket');
+      const winnersBracketResponse = await fetch('https://api.sleeper.app/v1/league/1314038209503567872/winners_bracket');
       const winnersBracket = await winnersBracketResponse.json();
 
       const teams = rosters.map(roster => {
@@ -1064,12 +1064,12 @@
         return a.fpts - b.fpts;
       });
 
-      const pickOwners2026 = new Map();
+      const pickOwners2027 = new Map();
       for (let i = 1; i <= 12; i++) {
-        pickOwners2026.set(i, i);
+        pickOwners2027.set(i, i);
       }
-      tradedPicks.filter(p => p.season === "2026" && p.round === 1).forEach(p => {
-        pickOwners2026.set(p.roster_id, p.owner_id);
+      tradedPicks.filter(p => p.season === "2027" && p.round === 1).forEach(p => {
+        pickOwners2027.set(p.roster_id, p.owner_id);
       });
 
       const odds = [
@@ -1177,7 +1177,7 @@
       });
 
       const dynamicSeeds = teams.map((original_team, index) => {
-        const owner_roster_id = pickOwners2026.get(original_team.roster_id);
+        const owner_roster_id = pickOwners2027.get(original_team.roster_id);
         const owner_team = teams.find(t => t.roster_id === owner_roster_id);
         const isTraded = owner_roster_id !== original_team.roster_id;
         const displayName = isTraded ? `${owner_team.name} (via ${original_team.name})` : original_team.name;
@@ -1990,7 +1990,7 @@
     }
 
     function updateCountdown() {
-      const target = new Date("Dec 30, 2025 00:00:00").getTime();
+      const target = new Date("Jan 5, 2027 00:00:00").getTime();
       const now = new Date().getTime();
       const diff = target - now;
       if (diff < 0) {
@@ -2002,7 +2002,7 @@
       const minutes = Math.floor((diff % (1000*60*60))/(1000*60));
       const seconds = Math.floor((diff % (1000*60))/1000);
       document.getElementById("countdown").innerHTML =
-        `⏰ ${days}d ${hours}h ${minutes}m ${seconds}s until 2026 Draft Lottery`;
+        `⏰ ${days}d ${hours}h ${minutes}m ${seconds}s until 2027 Draft Lottery`;
     }
 
     (async () => {
